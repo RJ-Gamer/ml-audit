@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ml-audit"
+name = "django-ml-audit"
 version = "0.1.0"
 description = "Django-based toolkit for auditing ML predictions in production."
 readme = "README.md"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/ml-audit"
+Homepage = "https://github.com/RJ-Gamer/ml-audit"
 
 [tool.setuptools.packages.find]
 where = ["src"]
