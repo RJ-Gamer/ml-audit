@@ -4,14 +4,9 @@ Example DRF view showing how to use ml-audit in a prediction endpoint.
 
 from __future__ import annotations
 
-from rest_framework import serializers, status, views
-from rest_framework.response import Response
+from rest_framework import serializers, views
 
-from ml_audit.services import (
-    ActorPayload,
-    attach_explanation,
-    record_prediction_event,
-)
+from ml_audit.integrations.drf import audited_prediction
 
 # --- Dummy model for illustration only ---
 
@@ -48,6 +43,17 @@ class FraudResponseSerializer(serializers.Serializer):
 # --- The view ---
 
 
+def build_fraud_explanation(features, output, prediction):
+    features_importances = {
+        "amount": 0.6 if features["amount"] > 1000 else 0.1,
+        "is_new_customer": 0.3 if features["is_new_customer"] else 0.0,
+    }
+    return {
+        "payload": {"feature_importances": features_importances},
+        "summary": f"high amount ({features['amount']}) and new customer status increased fraud risk.",
+    }
+
+
 class FraudPredictionView(views.APIView):
     """
     POST /fraud-predict/
@@ -60,54 +66,28 @@ class FraudPredictionView(views.APIView):
         serializer.is_valid(raise_exception=True)
         features = serializer.validated_data
 
-        # 1. Run the model
-        score = model.predict_proba(features)
-        is_fraud = score > 0.8
-        output = {"fraud_probability": score, "is_fraud": is_fraud}
-
-        # 2. Build actor payload from request (if authenticated)
-        actor = None
-        user = request.user if request.user and request.user.is_authenticated else None
-        if user is not None:
-            actor = ActorPayload(
-                actor_type="user",
-                actor_id=str(user.pk),
-                tenant_id=getattr(user, "tenant_id", None),
-                ip_address=request.META.get("REMOTE_ADDR"),
-                user_agent=request.META.get("HTTP_USER_AGENT"),
-            )
-
-        # 3. Record prediction event
-        prediction = record_prediction_event(
-            model_name="dummy_fraud_model",
+        @audited_prediction(
+            model_name="fraud_model",
             model_version="1.0.0",
-            features=features,
-            output=output,
-            decision_outcome="flagged" if is_fraud else "clean",
-            confidence=score,
-            actor=actor,
             environment="prod",
-            trace_id=request.headers.get("X-Request-ID"),
+            decision_field="is_fraud",
+            confidence_field="fraud_probability",
+            explanation_builder=build_fraud_explanation,
         )
+        def predict_fraud(features, request):
+            score = 0.1
+            if features["amount"] > 1000:
+                score += 0.4
 
-        # 4. (Optional) attach a simple explanation
-        feature_importances = {
-            "amount": 0.6 if features["amount"] > 1000 else 0.1,
-            "is_new_customer": 0.3 if features["is_new_customer"] else 0.0,
-        }
-        attach_explanation(
-            prediction=prediction,
-            method="dummy_reason_codes",
-            payload={"feature_importances": feature_importances},
-            summary_text="High transaction amount and new customer status increased fraud risk.",
-        )
+            if features["is_new_customer"]:
+                score += 0.2
 
-        # 5. Build response
-        response_data = FraudResponseSerializer(
-            {
+            score = max(0.0, min(1.0, score))
+
+            return {
                 "fraud_probability": score,
-                "is_fraud": is_fraud,
-                "prediction_id": prediction.id,
+                "is_fraud": score > 0.8,
             }
-        ).data
-        return Response(response_data, status=status.HTTP_200_OK)
+
+        result = predict_fraud(features, request)
+        return result

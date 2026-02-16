@@ -1,7 +1,7 @@
 # src/ml_audit/api/views.py
 
 from __future__ import annotations
-
+from datetime import datetime
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -28,8 +28,7 @@ class PredictionEventViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PredictionEventSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = (
-        PredictionEvent.objects.select_related("model", "actor")
-        .prefetch_related("explanation")
+        PredictionEvent.objects.select_related("model", "actor", "explanation")
         .order_by("-timestamp")
     )
 

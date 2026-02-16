@@ -37,8 +37,8 @@ class RequestingActorSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class explanationSerializer(serializers.ModelSerializer):
-    prediction_id = serializers.UUIDField(source="prediction.id", read_only=True)
+class ExplanationSerializer(serializers.ModelSerializer):
+    prediction_id = serializers.UUIDField(source="prediction.prediction_id", read_only=True)
 
     class Meta:
         model = Explanation
@@ -60,7 +60,7 @@ class explanationSerializer(serializers.ModelSerializer):
 class PredictionEventSerializer(serializers.ModelSerializer):
     model = ModelVersionSerializer(read_only=True)
     actor = RequestingActorSerializer(read_only=True)
-    explanation = explanationSerializer(read_only=True)
+    explanation = ExplanationSerializer(read_only=True)
 
     class Meta:
         model = PredictionEvent

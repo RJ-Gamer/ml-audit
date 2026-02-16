@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-ml-audit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Django-based toolkit for auditing ML predictions in production."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,10 +12,10 @@ license = { text = "MIT" }
 authors = [
   { name = "Rajat Jog", email = "rajatjog1294@gmail.com" },
 ]
-dependencies = [
-  "django>=5.0,<6.0",
-  "djangorestframework>=3.15,<4.0",
-]
+dependencies = ["django>=5.0,<6.0"]
+
+[project.optional-dependencies]
+drf = ["djangorestframework>=3.15,<4.0"]
 
 [project.urls]
 Homepage = "https://github.com/RJ-Gamer/ml-audit"

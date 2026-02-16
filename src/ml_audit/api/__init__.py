@@ -1,5 +1,5 @@
 from .serializers import (
-    explanationSerializer,
+    ExplanationSerializer,
     ModelVersionSerializer,
     PredictionEventSerializer,
     RequestingActorSerializer,
@@ -8,6 +8,6 @@ from .serializers import (
 __all__ = [
     "ModelVersionSerializer",
     "RequestingActorSerializer",
-    "explanationSerializer",
+    "ExplanationSerializer",
     "PredictionEventSerializer",
 ]

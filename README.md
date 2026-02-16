@@ -1,5 +1,13 @@
 # ml-audit
 
+
+<p align="left">
+  <a href="https://github.com/sponsors/RJ-Gamer">
+    <img src="https://img.shields.io/badge/Sponsor-GitHub-ff69b4?logo=github" alt="Sponsor on GitHub">
+  </a>
+</p>
+
+
 [![PyPI version](https://img.shields.io/pypi/v/ml-audit.svg)](https://pypi.org/project/ml-audit/)
 [![Python versions](https://img.shields.io/pypi/pyversions/ml-audit.svg)](https://pypi.org/project/ml-audit/)
 [![Django versions](https://img.shields.io/badge/django-5.x-blue.svg)](https://www.djangoproject.com/)
@@ -77,7 +85,13 @@ Requirements:
 Install from PyPI:
 
 ```bash
-pip install ml-audit
+pip install django-ml-audit
+```
+
+If DRF is optional:
+
+```bash
+pip install django-ml-audit[drf]
 ```
 
 Add to INSTALLED_APPS:
@@ -217,6 +231,10 @@ Behavior:
 - Keys in `DENYLIST` → replaced with MASK_VALUE.
 - Keys matching built-in sensitive names (`password`, `token`, `email`, `phone`, `credit_card`, etc.) → masked unless explicitly allowlisted.[web:50][web:54][web:185][web:187]
 
+⚠️ Redaction is applied only to the `features` field. 
+`output`, `metadata`, and `auth_context` are stored as provided.
+Ensure you handle sensitive data appropriately in those fields.
+
 ---
 
 ## API endpoints (read-only)
@@ -237,7 +255,7 @@ List prediction events with filters:
 
 Response body is a paginated list of predictions with nested model, actor, and explanation.
 
-`GET /predictions/{id}/`
+`GET /predictions/{uuid}/`
 Retrieve a single prediction (by UUID pk) with nested model, actor, and explanation.
 
 `GET /models/`
@@ -297,6 +315,15 @@ Version `0.1.0` is the first usable release; you can adopt it now, but expect po
 ml-audit is currently early-stage.
 APIs and models may still evolve until v1.0. Feedback and contributions are welcome.
 
+---
+
+## Design guarantees (v0.1.x)
+
+- Prediction events are append-only through the public API.
+- `prediction_id` is stable and idempotent.
+- Exactly one explanation per prediction (v1 constraint).
+- No write REST endpoints (writes happen via Python API).
+- Read API is paginated and read-only.
 
 ---
 

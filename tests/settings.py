@@ -6,8 +6,11 @@ DEBUG = True
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
+    "rest_framework",
     "ml_audit",
 ]
+
+ROOT_URLCONF = "tests.urls"
 
 DATABASES = {
     "default": {

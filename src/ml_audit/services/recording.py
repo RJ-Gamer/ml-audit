@@ -3,19 +3,17 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
-from typing import Any, Dict
 
-from ml_audit.conf import get_redaction_config
-
+from django.db import transaction
 from django.utils import timezone
 
+from ml_audit.conf import get_redaction_config
 from ml_audit.models import (
     ModelVersion,
     PredictionEvent,
     PredictionStatus,
     RequestingActor,
 )
-from ml_audit.conf import get_redaction_config
 
 
 @dataclass
@@ -38,7 +36,7 @@ def _get_or_create_model_version(
     model_version: str,
     framework: str | None = None,
     build_id: str | None = None,
-    commit_hash: dict | None = None,
+    commit_hash: str | None = None,
     config_snapshot: Optional[Dict[str, Any]] = None,
 ) -> ModelVersion:
     """Resolve or create a model version."""
@@ -75,40 +73,29 @@ def _get_or_create_actor(
         tenant_id=tenant_id,
         defaults={
             "ip_address": payload.ip_address,
-            "user_agent": payload.user_agent,
+            "user_agent": payload.user_agent or "",
             "auth_context": payload.auth_token,
         },
     )
     return obj
 
 
-
-
 def _redact_features(features: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Field-based redaction for structured feature dicts.
-    """
     config = get_redaction_config()
-
-    # IMPORTANT: this must be a real dict literal, not Dict[...] from typing
     redacted: Dict[str, Any] = {}
 
     for key, value in features.items():
         key_str = str(key)
 
-        if key_str in config.allowlist:
-            redacted[key_str] = value
-            continue
-
-        if key_str in config.denylist or key_str.lower() in config.default_sensitive_names:
+        if config.is_sensitive(key_str):
             redacted[key_str] = config.mask_value
-            continue
-
-        redacted[key_str] = value
+        else:
+            redacted[key_str] = value
 
     return redacted
 
 
+@transaction.atomic
 def record_prediction_event(
     *,
     model_name: str,
@@ -126,7 +113,7 @@ def record_prediction_event(
     input_fingerprint: str | None = None,
     framework: str | None = None,
     build_id: str | None = None,
-    commit_hash: dict | None = None,
+    commit_hash: str | None = None,
     config_snapshot: Optional[Dict[str, Any]] = None,
     prediction_id: str | None = None,
     timestamp=None,
@@ -147,21 +134,25 @@ def record_prediction_event(
 
     redacted_features = _redact_features(features)
 
-    prediction_event = PredictionEvent.objects.create(
-        prediction_id=prediction_id or str(uuid.uuid4()),
-        model=model_version_obj,
-        actor=requesting_actor,
-        features=redacted_features,
-        output=output,
-        decision_outcome=decision_outcome or "",
-        environment=environment or "",
-        trace_id=trace_id or "",
-        latency_ms=latency_ms,
-        status=status,
-        confidence=confidence,
-        metadata=metadata or {},
-        input_fingerprint=input_fingerprint or "",
-        timestamp=timestamp or timezone.now(),
+    prediction_id = prediction_id or str(uuid.uuid4())
+
+    prediction_event, created = PredictionEvent.objects.get_or_create(
+        prediction_id=prediction_id,
+        defaults={
+            "model": model_version_obj,
+            "actor": requesting_actor,
+            "features": redacted_features,
+            "output": output,
+            "decision_outcome": decision_outcome or "",
+            "environment": environment or "",
+            "trace_id": trace_id or "",
+            "latency_ms": latency_ms,
+            "status": status,
+            "confidence": confidence,
+            "metadata": metadata or {},
+            "input_fingerprint": input_fingerprint or "",
+            "timestamp": timestamp or timezone.now(),
+        },
     )
 
     return prediction_event
