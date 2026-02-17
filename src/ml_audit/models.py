@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -213,6 +214,13 @@ class PredictionEvent(models.Model):
     def __str__(self):
         return f"{self.model} - {self.prediction_id}"
 
+    def save(self, *args, **kwargs):
+        if self.pk and not kwargs.get('force_insert', False):
+            raise ValidationError("PredictionEvent updates are not allowed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PredictionEvent deletion is not allowed.")
 
 class Explanation(models.Model):
     """

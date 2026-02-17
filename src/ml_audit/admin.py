@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django.contrib import admin
+from django.http import HttpRequest
 
 from ml_audit.models import Explanation, ModelVersion, PredictionEvent, RequestingActor
 
@@ -85,13 +86,15 @@ class PredictionEventAdmin(admin.ModelAdmin):
         "actor__actor_id",
         "actor__tenant_id",
     )
-    readonly_fields = (
-        "id",
-        "created_at",
-        "timestamp",
-    )
+    readonly_fields = [field for field in PredictionEvent._meta.fields]
     date_hierarchy = "timestamp"
     ordering = ("-timestamp",)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+    
+    def has_delete_permission(self, request, obj = None) -> bool:
+        return False
 
 
 @admin.register(Explanation)

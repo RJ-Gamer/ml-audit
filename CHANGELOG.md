@@ -28,3 +28,15 @@ and this project adheres to Semantic Versioning.
 - DRF integration identifier handling
 
 ---
+
+## [0.2.0] - 2026-02-17
+
+### Added
+- Application-level immutability enforcement for `PredictionEvent`
+- Admin hardening (no add/delete, read-only fields)
+
+### Changed
+- PredictionEvent now raises ValidationError on update or delete
+- Strengthened append-only ledger semantics
+
+---
